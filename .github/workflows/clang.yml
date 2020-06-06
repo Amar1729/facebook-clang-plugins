@@ -1,0 +1,136 @@
+name: Build clang
+# idea - only run on tagged builds?
+# also: opam installs use versions from infer v0.17.0
+# https://github.com/facebook/infer/blob/v0.17.0/opam.locked
+on: [push, pull_request]
+jobs:
+  opam:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest]
+    env:
+      OCAML_VERSION: ocaml-variants.4.07.1+flambda
+      OPAM_VERSION: 2.0.3
+      OPAMYES: 1
+      OPAMVERBOSE: 1
+    steps:
+      - name: Set up opam
+        id: set-up-opam
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            ARCH="linux"
+          else
+            ARCH="darwin"
+          fi
+
+          mkdir -p $HOME/bin
+          curl -L "https://github.com/ocaml/opam/releases/download/$OPAM_VERSION/opam-$OPAM_VERSION-x86_64-$ARCH" -o $HOME/bin/opam
+          chmod +x "$HOME/bin/opam"
+          file "$HOME/bin/opam"
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo chmod +x "$HOME/bin/opam"
+          fi
+
+          export PATH="$HOME/bin:$PATH"
+          echo "::add-path::$HOME/bin"
+
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            # sudo apt install 
+            echo 'should i install?'
+          else
+            brew install pkg-config
+          fi
+
+          # this should use opam's current root?
+          ls -a $HOME
+          mkdir -p $HOME/.opam
+          OPAM_HASH="$(find $HOME/.opam -type f -print0 | sort -z | xargs -0 shasum | shasum | cut -f1 -d" ")"
+          echo "::set-output name=opam-pkgs::$HOME/.opam"
+          echo "::set-output name=opam-hash::$OPAM_HASH"
+
+      - name: Cache opam
+        id: cache
+        uses: actions/cache@v1
+        with:
+          path: ${{ steps.set-up-opam.outputs.opam-pkgs }}
+          key: ${{ runner.os }}-opampkgs-${{ steps.set-up-opam.outputs.opam-hash }}
+          restore-keys: ${{ runner.os }}-opampkgs-
+
+      - name: Install opam packages
+        id: install-opam-pkgs
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          opam init --compiler=${OCAML_VERSION} --no-setup --disable-sandboxing
+          opam install ctypes.0.14.0 ounit.2.0.8
+          eval $(opam env)
+
+          # recalculate hashes
+          OPAM_HASH="$(find $HOME/.opam -type f -print0 | sort -z | xargs -0 shasum | shasum | cut -f1 -d" ")"
+          echo "::set-output name=opam-hash::$OPAM_HASH"
+
+  build:
+    needs: opam
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Check files changed
+        id: files-changed
+        uses: trilom/file-changes-action@v1.2.4
+        with:
+          output: ' '
+
+      - name: Check clang/ changed
+        id: clang-changed
+        run: |
+          MODIFIED=0
+
+          echo "added:    ${{ steps.files-changed.outputs.files_added }}"
+          echo "modified: ${{ steps.files-changed.outputs.files_modified }}"
+          echo "removed:  ${{ steps.files-changed.outputs.files_removed }}"
+
+          for f in $(echo '${{ steps.files-changed.outputs.files_added }}'); do
+            if [[ "$f" == "clang/"* ]]; then
+              echo "added to clang/: $f"
+              MODIFIED=1
+            fi
+          done
+
+          for f in $(echo '${{ steps.files-changed.outputs.files_modified }}'); do
+            if [[ "$f" == "clang/"* ]]; then
+              echo "clang/ modified: $f"
+              MODIFIED=1
+            fi
+          done
+
+          for f in $(echo '${{ steps.files-changed.outputs.files_removed }}'); do
+            if [[ "$f" == "clang/"* ]]; then
+              echo "removed from clang/: $f"
+              MODIFIED=1
+            fi
+          done
+
+          if [ $MODIFIED -eq 1 ]; then
+            echo "clang/ directory changed: rebuilding clang."
+            echo "::set-output name=clang-changed::1"
+          else
+            echo "No clang/ files touched: skipping build."
+            echo "::set-output name=clang-changed::0"
+          fi
+
+      - name: Build clang
+        id: build-clang
+        if: steps.clang-changed.outputs.clang-changed == 1
+        run: ./clang/setup.sh
+
+      - name: Upload clang
+        id: upload-clang
+        # does uploading in a different step work?
+        uses: actions/upload-artifact@v2
+        with:
+          name: clang-install
+          path: clang/install/
