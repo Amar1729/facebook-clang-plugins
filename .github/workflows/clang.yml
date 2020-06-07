@@ -15,6 +15,10 @@ jobs:
       OPAMYES: 1
       OPAMVERBOSE: 1
     steps:
+      - name: Install macOS build requirements
+        if: runner.os == 'macOs'
+        run: brew install pkg-config
+
       - name: Set up opam
         id: set-up-opam
         run: |
@@ -34,13 +38,6 @@ jobs:
 
           export PATH="$HOME/bin:$PATH"
           echo "::add-path::$HOME/bin"
-
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            # sudo apt install 
-            echo 'should i install?'
-          else
-            brew install pkg-config
-          fi
 
           # this should use opam's current root?
           ls -a $HOME
