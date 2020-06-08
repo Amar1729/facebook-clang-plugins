@@ -8,8 +8,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest]
-        ocaml_version: ocaml-variants.4.07.1
+        os:
+          - ubuntu-latest
+          - macOS-latest
+        ocaml_version:
+          - ocaml-variants.4.07.1
     env:
       OPAM_VERSION: 2.0.3
       OPAMYES: 1
