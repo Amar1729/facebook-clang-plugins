@@ -113,6 +113,7 @@ jobs:
         id: build-clang
         if: steps.clang-changed.outputs.clang-changed == 1
         run: ./clang/setup.sh
+        run: tar -cvzf clang-install.tar.gz -C clang install/
 
       - name: Upload clang
         id: upload-clang
@@ -121,3 +122,25 @@ jobs:
         with:
           name: clang-install
           path: clang/install/
+
+      - name: Create Clang Release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        id: upload-release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: clang-install.tar.gz
+          asset_name: clang-install.tar.gz
+          asset_content_type: application/gzip
