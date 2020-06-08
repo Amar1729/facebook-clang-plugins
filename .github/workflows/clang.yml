@@ -9,38 +9,25 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macOS-latest]
+        ocaml_version: ocaml-variants.4.07.1
     env:
-      OCAML_VERSION: ocaml-variants.4.07.1+flambda
       OPAM_VERSION: 2.0.3
       OPAMYES: 1
       OPAMVERBOSE: 1
     steps:
       - name: Install macOS build requirements
-        if: runner.os == 'macOs'
+        if: runner.os == 'macos'
         run: brew install pkg-config
 
-      - name: Set up opam
-        id: set-up-opam
+      - name: Use OCaml ${{ matrix.ocaml_version }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ matrix.ocaml_version }}
+
+      - name: Pre-cache opam
+        id: pre-cache-opam
         run: |
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            ARCH="linux"
-          else
-            ARCH="darwin"
-          fi
-
-          mkdir -p $HOME/bin
-          curl -L "https://github.com/ocaml/opam/releases/download/$OPAM_VERSION/opam-$OPAM_VERSION-x86_64-$ARCH" -o $HOME/bin/opam
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            sudo chmod +x "$HOME/bin/opam"
-          else
-            chmod +x "$HOME/bin/opam"
-          fi
-
-          export PATH="$HOME/bin:$PATH"
-          echo "::add-path::$HOME/bin"
-
           # this should use opam's current root?
-          ls -a $HOME
           mkdir -p $HOME/.opam
           OPAM_HASH="$(find $HOME/.opam -type f -print0 | sort -z | xargs -0 shasum | shasum | cut -f1 -d" ")"
           echo "::set-output name=opam-pkgs::$HOME/.opam"
@@ -58,7 +45,7 @@ jobs:
         id: install-opam-pkgs
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          opam init --compiler=${OCAML_VERSION} --no-setup --disable-sandboxing
+          opam init --compiler=${{ matrix.ocaml_version }} --no-setup --disable-sandboxing
           opam install ctypes.0.14.0 ounit.2.0.8
           eval $(opam env)
 
