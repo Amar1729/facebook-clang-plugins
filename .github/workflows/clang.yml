@@ -115,14 +115,6 @@ jobs:
         run: ./clang/setup.sh
         run: tar -cvzf clang-install.tar.gz -C clang install/
 
-      - name: Upload clang
-        id: upload-clang
-        # does uploading in a different step work?
-        uses: actions/upload-artifact@v2
-        with:
-          name: clang-install
-          path: clang/install/
-
       - name: Create Clang Release
         id: create-release
         uses: actions/create-release@v1
