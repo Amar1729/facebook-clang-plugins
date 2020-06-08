@@ -112,10 +112,12 @@ jobs:
       - name: Build clang
         id: build-clang
         if: steps.clang-changed.outputs.clang-changed == 1
-        run: ./clang/setup.sh
-        run: tar -cvzf clang-install.tar.gz -C clang install/
+        run: |
+          ./clang/setup.sh
+          tar -cvzf clang-install.tar.gz -C clang install/
 
       - name: Create Clang Release
+        if: ${{ github.event_name == 'push' && steps.clang-changed.outputs.clang-changed == 1 }}
         id: create-release
         uses: actions/create-release@v1
         env:
@@ -127,6 +129,7 @@ jobs:
           prerelease: false
 
       - name: Upload Release Asset
+        if: ${{ github.event_name == 'push' && steps.clang-changed.outputs.clang-changed == 1 }}
         id: upload-release
         uses: actions/upload-release-asset@v1
         env:
