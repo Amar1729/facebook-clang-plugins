@@ -40,8 +40,8 @@ jobs:
         id: cache
         uses: actions/cache@v1
         with:
-          path: ${{ steps.set-up-opam.outputs.opam-pkgs }}
-          key: ${{ runner.os }}-opampkgs-${{ steps.set-up-opam.outputs.opam-hash }}
+          path: ${{ steps.pre-cache-opam.outputs.opam-pkgs }}
+          key: ${{ runner.os }}-opampkgs-${{ steps.pre-cache-opam.outputs.opam-hash }}
           restore-keys: ${{ runner.os }}-opampkgs-
 
       - name: Install opam packages
