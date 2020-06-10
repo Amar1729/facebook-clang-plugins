@@ -58,10 +58,13 @@ jobs:
 
       - name: Build clang
         id: build-clang
-        if: steps.clang-changed.outputs.clang-changed == 1
+        # if: steps.clang-changed.outputs.clang-changed == 1
         run: |
-          ./clang/setup.sh
-          tar -cvzf clang-install.tar.gz -C clang install/
+          # ./clang/setup.sh
+          # simple steps to speed up testing time temporarily
+          mkdir -p clang/install/fakedir
+          touch clang/install{,/fakedir}/fakefile
+          tar -cvzf "clang-install-${{ matrix.os }}.tar.gz" -C clang install/
 
       - name: Create Clang Release
         if: ${{ github.event_name == 'push' && steps.clang-changed.outputs.clang-changed == 1 }}
