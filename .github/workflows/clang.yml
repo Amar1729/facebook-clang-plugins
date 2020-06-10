@@ -4,60 +4,7 @@ name: Build clang
 # https://github.com/facebook/infer/blob/v0.17.0/opam.locked
 on: [push, pull_request]
 jobs:
-  opam:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macOS-latest
-        ocaml_version:
-          - 4.07.1
-    env:
-      OPAM_VERSION: 2.0.3
-      OPAMYES: 1
-      OPAMVERBOSE: 1
-    steps:
-      - name: Install macOS build requirements
-        if: runner.os == 'macos'
-        run: brew install pkg-config
-
-      - name: Use OCaml ${{ matrix.ocaml_version }}
-        uses: avsm/setup-ocaml@v1
-        with:
-          ocaml-version: ${{ matrix.ocaml_version }}
-
-      - name: Pre-cache opam
-        id: pre-cache-opam
-        run: |
-          # this should use opam's current root?
-          mkdir -p $HOME/.opam
-          OPAM_HASH="$(find $HOME/.opam -type f -print0 | sort -z | xargs -0 shasum | shasum | cut -f1 -d" ")"
-          echo "::set-output name=opam-pkgs::$HOME/.opam"
-          echo "::set-output name=opam-hash::$OPAM_HASH"
-
-      - name: Cache opam
-        id: cache
-        uses: actions/cache@v1
-        with:
-          path: ${{ steps.pre-cache-opam.outputs.opam-pkgs }}
-          key: ${{ runner.os }}-opampkgs-${{ steps.pre-cache-opam.outputs.opam-hash }}
-          restore-keys: ${{ runner.os }}-opampkgs-
-
-      - name: Install opam packages
-        id: install-opam-pkgs
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          opam init --compiler=${{ matrix.ocaml_version }} --no-setup --disable-sandboxing
-          opam install ctypes.0.14.0 ounit.2.0.8
-          eval $(opam env)
-
-          # recalculate hashes
-          OPAM_HASH="$(find $HOME/.opam -type f -print0 | sort -z | xargs -0 shasum | shasum | cut -f1 -d" ")"
-          echo "::set-output name=opam-hash::$OPAM_HASH"
-
   build:
-    needs: opam
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
