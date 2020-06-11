@@ -37,6 +37,8 @@ usage () {
     echo "    -r,--only-record-install   do not install clang but pretend we did"
 }
 
+# fake comment
+
 check_installed () {
     pushd "$SCRIPT_DIR" > /dev/null
     $SHASUM -c "$CLANG_INSTALLED_VERSION_FILE" >& /dev/null
