@@ -20,6 +20,8 @@ jobs:
 
       - name: Check clang/ Changed
         id: clang-changed
+        # don't run this if a commit is appropriately tagged, we'll build clang anyway
+        if: ${{ !(startsWith(github.ref, 'refs/tags/v.')) }}
         run: |
           MODIFIED=0
 
